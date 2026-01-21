@@ -1,0 +1,1 @@
+"npm instal n8n pour commencer"
