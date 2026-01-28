@@ -1,0 +1,5 @@
+{
+    "cleMongodb": {
+        "host": "mongodb+srv://pierreychnightder561_db_user:<db_password>@n8n.igr1ilm.mongodb.net/"
+    }
+}

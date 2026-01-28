@@ -1,15 +1,36 @@
 {
-  "version": "1.0.0",
-  "description": "",
-  "license": "ISC",
-  "author": "",
-  "type": "commonjs",
-  "main": "index.js",
-  "scripts": {
-    "start": "n8n"
-  },
-  "keywords": [],
-  "dependencies": {
-    "n8n": "^2.4.4"
-  }
+	"name": "projet_automatisation_n8n",
+	"version": "1.0.0",
+	"description": "\"npm instal n8n pour commencer\"",
+	"main": "index.js",
+	"types": "module",
+	"files": [
+		"build"
+	],
+	"bin": {
+		"n8n": "./build/index.js"
+	},
+	"scripts": {
+		"build": "tsc && chmod 755 build/index.js"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/FlorianKP/Projet_Automatisation_n8n.git"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"type": "commonjs",
+	"bugs": {
+		"url": "https://github.com/FlorianKP/Projet_Automatisation_n8n/issues"
+	},
+	"homepage": "https://github.com/FlorianKP/Projet_Automatisation_n8n#readme",
+	"dependencies": {
+		"@modelcontextprotocol/sdk": "^1.25.3",
+		"zod": "^3.25.76"
+	},
+	"devDependencies": {
+		"@types/node": "^25.0.10",
+		"typescript": "^5.9.3"
+	}
 }

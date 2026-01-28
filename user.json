@@ -1,0 +1,9 @@
+{
+	"_id": {
+		"$oid": "6979c68fbec637caafec1097"
+	},
+	"name": " Dupont",
+	"firstName": "Jean",
+	"email": "jean.dupont@email.com",
+	"skill": ["SQl", "JAVA", "Javascript"]
+}
