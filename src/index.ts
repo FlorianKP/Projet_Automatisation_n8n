@@ -3,12 +3,18 @@ import { z } from "zod";
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import dotenv from 'dotenv';
+import { userService } from './service/user.service.js';
+dotenv.config();
 
 const SKILLS_BY_PERSON: Record<string, string[]> = {
-  marie: ["Java", "Spring Boot", "Docker"],
-  jean: ["TypeScript", "Node.js", "MongoDB"],
-  alice: ["n8n", "Automation"],
+	// marie: ['Java', 'Spring Boot', 'Docker'],
+	// jean: ['TypeScript', 'Node.js', 'MongoDB'],
+	// alice: ['n8n', 'Automation'],
+	...(await userService.getSkillbyUsers()),
 };
+
+console.log('Skills by person:', SKILLS_BY_PERSON);
 
 const app = express();
 app.use(express.json({ limit: "1mb" }));
