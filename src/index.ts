@@ -1,52 +1,51 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { z } from 'zod';
+import express, { Request, Response } from "express";
+import { z } from "zod";
 
-// Données en dur : nom -> compétences
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+
 const SKILLS_BY_PERSON: Record<string, string[]> = {
-	marie: ['Java', 'Spring Boot', 'Docker'],
-	jean: ['TypeScript', 'Node.js', 'MongoDB'],
-	alice: ['n8n', 'Automation'],
+  marie: ["Java", "Spring Boot", "Docker"],
+  jean: ["TypeScript", "Node.js", "MongoDB"],
+  alice: ["n8n", "Automation"],
 };
 
-const server = new McpServer({
-	name: 'n8n',
-	version: '0.0.1',
+const app = express();
+app.use(express.json({ limit: "1mb" }));
+
+app.all("/mcp", async (req: Request, res: Response) => {
+  const server = new McpServer({ name: "Simple Skills MCP (HTTP)", version: "0.0.1" });
+
+  server.registerTool(
+    "getSkills",
+    {
+      description: "Return the list of skills for a given person name.",
+      inputSchema: {
+        name: z.string().min(1).describe("Person name (e.g. 'Marie')"),
+      },
+    },
+    async ({ name }: { name: string }) => {
+      const skills = SKILLS_BY_PERSON[name.toLowerCase()] ?? [];
+      return { content: [{ type: "text", text: JSON.stringify(skills) }] };
+    }
+  );
+
+  const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+
+  res.on("close", () => {
+    transport.close();
+    server.close();
+  });
+
+  try {
+    await server.connect(transport);
+    await transport.handleRequest(req, res, req.body);
+  } catch (e) {
+    console.error("MCP error:", e);
+    if (!res.headersSent) res.status(500).send("MCP error");
+  }
 });
 
-server.registerTool(
-	'getSkills', // Argument 1 : Le nom
-	{
-		description:
-			'Returns the list of professional skills for a given person. Use this tool when you need to know what technologies or competencies someone has.',
-	}, // Argument 2 : La définition (Schéma JSON)
-	async ({ name }: any) => {
-		// Argument 3 : Le Handler (Callback)
-		const normalizedName = name.toLowerCase().trim();
-		const skills = SKILLS_BY_PERSON[normalizedName];
-
-		if (!skills) {
-			return {
-				content: [
-					{
-						type: 'text',
-						text: `No skills found for "${name}".`,
-					},
-				],
-				isError: true,
-			};
-		}
-
-		return {
-			content: [
-				{
-					type: 'text',
-					text: `Skills for ${name}: ${skills.join(', ')}`,
-				},
-			],
-		};
-	}
-);
-
-const transport = new StdioServerTransport();
-server.connect(transport);
+app.listen(3000, "127.0.0.1", () => {
+  console.error("🚀 MCP HTTP on http://127.0.0.1:3000/mcp");
+});
