@@ -1,57 +1,72 @@
-import express, { Request, Response } from "express";
-import { z } from "zod";
-
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import dotenv from 'dotenv';
-import { userService } from './service/user.service.js';
-dotenv.config();
+import { z } from "zod";
+import Database from "better-sqlite3";
 
-const SKILLS_BY_PERSON: Record<string, string[]> = {
-	// marie: ['Java', 'Spring Boot', 'Docker'],
-	// jean: ['TypeScript', 'Node.js', 'MongoDB'],
-	// alice: ['n8n', 'Automation'],
-	...(await userService.getSkillbyUsers()),
+const StorageEnum = z.enum([
+  "FRIGO",
+  "PLACARD",
+  "CONGELATEUR",
+  "CAVE_A_VIN",
+  "ETAGERE_A_EPICES",
+]);
+
+const Input = z.object({
+  storage: StorageEnum.describe("Nom du contenant (doit correspondre à Contenant.name)"),
+});
+
+type IngredientRow = {
+  id: number;
+  name: string;
+  type: string;
+  quantity: number;
 };
 
-console.log('Skills by person:', SKILLS_BY_PERSON);
+export function buildServer(sqlitePath: string) {
+  const db = new Database(sqlitePath, { readonly: false }); // mettez true si lecture seule
+  db.pragma("journal_mode = WAL");
 
-const app = express();
-app.use(express.json({ limit: "1mb" }));
+  const server = new McpServer({ name: "kitchen-mcp", version: "1.0.0" });
 
-app.all("/mcp", async (req: Request, res: Response) => {
-  const server = new McpServer({ name: "Simple Skills MCP (HTTP)", version: "0.0.1" });
+  // Récupère les ingrédients d’un contenant via son nom (Contenant.name)
+  const stmt = db.prepare(`
+    SELECT i.id, i.name, i.type, i.quantity
+    FROM ingredient i
+    JOIN Contenant c ON c.id = i.contenant_id
+    WHERE c.name = ?
+    ORDER BY i.name ASC
+  `);
 
   server.registerTool(
-    "getSkills",
+    "get_ingredients",
     {
-      description: "Return the list of skills for a given person name.",
-      inputSchema: {
-        name: z.string().min(1).describe("Person name (e.g. 'Marie')"),
-      },
+      title: "Get ingredients",
+      description:
+        "Récupère la liste d’ingrédients pour un contenant (FRIGO, PLACARD, etc.).",
+      inputSchema: Input,
     },
-    async ({ name }: { name: string }) => {
-      const skills = SKILLS_BY_PERSON[name.toLowerCase()] ?? [];
-      return { content: [{ type: "text", text: JSON.stringify(skills) }] };
+    async ({ storage }) => {
+      const rows = stmt.all(storage) as IngredientRow[];
+
+      const payload = {
+        storage,
+        ingredients: rows.map((r) => ({
+          id: r.id,
+          name: r.name,
+          type: r.type,
+          quantity: r.quantity,
+        })),
+      };
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(payload, null, 2),
+          },
+        ],
+      };
     }
   );
 
-  const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
-
-  res.on("close", () => {
-    transport.close();
-    server.close();
-  });
-
-  try {
-    await server.connect(transport);
-    await transport.handleRequest(req, res, req.body);
-  } catch (e) {
-    console.error("MCP error:", e);
-    if (!res.headersSent) res.status(500).send("MCP error");
-  }
-});
-
-app.listen(3000, "127.0.0.1", () => {
-  console.error("🚀 MCP HTTP on http://127.0.0.1:3000/mcp");
-});
+  return server;
+}

@@ -1,1 +1,5 @@
 npx @modelcontextprotocol/inspector node build/index.js
+
+Pour les install better-sql :
+npm install better-sqlite3
+npm install -D @types/better-sqlite3
