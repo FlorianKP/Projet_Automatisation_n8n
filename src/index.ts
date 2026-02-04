@@ -43,7 +43,7 @@ export function buildServer(sqlitePath: string) {
       inputSchema: Input,
     },
     async ({ storage }) => {
-      const rows = stmt.all(storage) as IngredientRow[];
+      const rows = stmt.all() as IngredientRow[];
       console.log(rows);
       const payload = {
         storage,
@@ -73,7 +73,7 @@ const app = express();
 app.use(express.json({ limit: "1mb" }));
 
 app.all("/mcp", async (req: express.Request, res: express.Response) => {
-  const server = buildServer("Z:\BUT 3\Développement avancé\n8n\Projet_Automatisation_n8n\src\seed\sqlite.db")
+  const server = buildServer("Z:/BUT_3/Développement_avancé/n8n/Projet_Automatisation_n8n/src/seed/sqlite.db")
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
 
   res.on("close", () => {
