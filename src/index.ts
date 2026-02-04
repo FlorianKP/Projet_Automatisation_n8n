@@ -1,6 +1,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import Database from "better-sqlite3";
+import express from "express";
 
 const StorageEnum = z.enum([
   "FRIGO",
@@ -33,8 +35,7 @@ export function buildServer(sqlitePath: string) {
     FROM ingredient i
     JOIN Contenant c ON c.id = i.contenant_id
     WHERE c.name = ?
-    ORDER BY i.name ASC
-  `);
+    ORDER BY i.name ASC`);
 
   server.registerTool(
     "get_ingredients",
@@ -46,7 +47,7 @@ export function buildServer(sqlitePath: string) {
     },
     async ({ storage }) => {
       const rows = stmt.all(storage) as IngredientRow[];
-
+      console.log(rows);
       const payload = {
         storage,
         ingredients: rows.map((r) => ({
@@ -70,3 +71,27 @@ export function buildServer(sqlitePath: string) {
 
   return server;
 }
+
+const app = express();
+app.use(express.json({ limit: "1mb" }));
+
+app.all("/mcp", async (req: Request, res: Response) => {
+  const server = buildServer("src/seed/sqlite.db")
+  const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+
+  res.on("close", () => {
+    transport.close();
+    server.close();
+  });
+
+  try {
+    await server.connect(transport);
+    await transport.handleRequest(req, res, req.body);
+  } catch (e) {
+    console.error("MCP error:", e);
+    if (!res.headersSent) res.status(500).send("MCP error");
+  }
+});
+app.listen(3000, "127.0.0.1", () => {
+  console.error("🚀 MCP HTTP on http://127.0.0.1:3000/mcp");
+});
