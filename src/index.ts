@@ -31,11 +31,8 @@ export function buildServer(sqlitePath: string) {
 
   // Récupère les ingrédients d’un contenant via son nom (Contenant.name)
   const stmt = db.prepare(`
-    SELECT i.id, i.name, i.type, i.quantity
-    FROM ingredient i
-    JOIN Contenant c ON c.id = i.contenant_id
-    WHERE c.name = ?
-    ORDER BY i.name ASC`);
+    SELECT *
+    FROM ingredient`);
 
   server.registerTool(
     "get_ingredients",
@@ -75,8 +72,8 @@ export function buildServer(sqlitePath: string) {
 const app = express();
 app.use(express.json({ limit: "1mb" }));
 
-app.all("/mcp", async (req: Request, res: Response) => {
-  const server = buildServer("src/seed/sqlite.db")
+app.all("/mcp", async (req: express.Request, res: express.Response) => {
+  const server = buildServer("Z:\BUT 3\Développement avancé\n8n\Projet_Automatisation_n8n\src\seed\sqlite.db")
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
 
   res.on("close", () => {
